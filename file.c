@@ -1,1 +1,1 @@
-main() { return 42 }
+main() { return 42; }
