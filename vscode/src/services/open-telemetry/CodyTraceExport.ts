@@ -54,6 +54,7 @@ export class CodyTraceExporter extends OTLPTraceExporter {
                 const rootChildSpan = getRootChildSpan(spanMap, span)
                 if (rootChildSpan && isSampled(rootChildSpan) && isContinued(rootChildSpan)) {
                     spansToExport.push(span)
+                    continue
                 }
 
                 const spanId = span.spanContext().spanId
