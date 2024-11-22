@@ -139,6 +139,7 @@ import { getChatPanelTitle } from './chat-helpers'
 import { type HumanInput, getPriorityContext } from './context'
 import { DefaultPrompter, type PromptInfo } from './prompt'
 import { getPromptsMigrationInfo, startPromptsMigration } from './prompts-migration'
+const { trace, context, propagation, ROOT_CONTEXT } = require('@opentelemetry/api');
 
 export interface ChatControllerOptions {
     extensionUri: vscode.Uri
@@ -281,6 +282,8 @@ export class ChatController implements vscode.Disposable, vscode.WebviewViewProv
                 this.setWebviewToChat()
                 break
             case 'submit': {
+                const traceparent = message.traceparent;
+
                 await this.handleUserMessageSubmission({
                     requestID: uuid.v4(),
                     inputText: PromptString.unsafe_fromUserQuery(message.text),
@@ -291,6 +294,7 @@ export class ChatController implements vscode.Disposable, vscode.WebviewViewProv
                     intent: message.intent,
                     intentScores: message.intentScores,
                     manuallySelectedIntent: message.manuallySelectedIntent,
+                    traceparent,
                 })
                 break
             }
@@ -620,6 +624,7 @@ export class ChatController implements vscode.Disposable, vscode.WebviewViewProv
         intent: detectedIntent,
         intentScores: detectedIntentScores,
         manuallySelectedIntent,
+        traceparent,
     }: {
         requestID: string
         inputText: PromptString
@@ -631,41 +636,75 @@ export class ChatController implements vscode.Disposable, vscode.WebviewViewProv
         intent?: ChatMessage['intent'] | undefined | null
         intentScores?: { intent: string; score: number }[] | undefined | null
         manuallySelectedIntent?: boolean | undefined | null
+        traceparent?: string | undefined | null
     }): Promise<void> {
-        return tracer.startActiveSpan('chat.submit', async (span): Promise<void> => {
-            span.setAttribute('sampled', true)
 
-            if (inputText.toString().match(/^\/reset$/)) {
-                span.addEvent('clearAndRestartSession')
-                span.end()
-                return this.clearAndRestartSession()
-            }
+      
+        const carrier = {
+          traceparent: traceparent,
+        } as Record<string, any>;
+        const getter = {
+            get(carrier: Record<string, any>, key: string) {
+              return carrier[key];
+            },
+            keys(carrier: Record<string, any>) {
+              return Object.keys(carrier);
+            },
+        }
 
-            this.chatBuilder.addHumanMessage({
-                text: inputText,
-                editorState,
-                intent: detectedIntent,
-            })
-            this.postViewTranscript({ speaker: 'assistant' })
+        const extractedContext = propagation.extract(ROOT_CONTEXT, carrier, getter)
+         // Verify the extracted context
 
-            await this.saveSession()
-            signal.throwIfAborted()
 
-            return this.sendChat(
-                {
-                    requestID,
-                    inputText,
-                    mentions,
+
+        return context.with(extractedContext, () => {
+            tracer.startActiveSpan('chat.submit', async (span): Promise<void> => {
+                span.setAttribute('sampled', true)
+                const spanFromContext = trace.getSpan(extractedContext);
+                console.log(
+                    'Extracted span context:',
+                    spanFromContext ? spanFromContext.spanContext() : 'No span in context'
+                )
+                
+                const currentSpan = trace.getSpan(context.active());
+
+                if (currentSpan) {
+                    const spanContext = currentSpan.spanContext()
+                    console.log('Node.js traceId:', spanContext.traceId)
+                    console.log('Node.js parentSpanId:', spanContext.spanId);
+                }
+                if (inputText.toString().match(/^\/reset$/)) {
+                    span.addEvent('clearAndRestartSession')
+                    span.end()
+                    return this.clearAndRestartSession()
+                }
+
+                this.chatBuilder.addHumanMessage({
+                    text: inputText,
                     editorState,
-                    signal,
-                    source,
-                    command,
                     intent: detectedIntent,
-                    intentScores: detectedIntentScores,
-                    manuallySelectedIntent,
-                },
-                span
-            )
+                })
+                this.postViewTranscript({ speaker: 'assistant' })
+
+                await this.saveSession()
+                signal.throwIfAborted()
+
+                return this.sendChat(
+                    {
+                        requestID,
+                        inputText,
+                        mentions,
+                        editorState,
+                        signal,
+                        source,
+                        command,
+                        intent: detectedIntent,
+                        intentScores: detectedIntentScores,
+                        manuallySelectedIntent,
+                    },
+                    span
+                )
+            })
         })
     }
 

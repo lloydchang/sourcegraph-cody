@@ -12,7 +12,7 @@ import type {
 import { Transcript, focusLastHumanMessageEditor } from './chat/Transcript'
 import type { VSCodeWrapper } from './utils/VSCodeApi'
 
-import type { Context } from '@opentelemetry/api'
+import { trace, type Context } from '@opentelemetry/api'
 import { truncateTextStart } from '@sourcegraph/cody-shared/src/prompt/truncation'
 import { CHAT_INPUT_TOKEN_BUDGET } from '@sourcegraph/cody-shared/src/token/constants'
 import styles from './Chat.module.css'
@@ -22,6 +22,7 @@ import { ScrollDown } from './components/ScrollDown'
 import type { View } from './tabs'
 import { useTelemetryRecorder } from './utils/telemetry'
 import { useUserAccountInfo } from './utils/useConfig'
+import { SpanManager } from './utils/spanManager'
 interface ChatboxProps {
     chatEnabled: boolean
     messageInProgress: ChatMessage | null
@@ -135,6 +136,21 @@ export const Chat: React.FunctionComponent<React.PropsWithChildren<ChatboxProps>
                 instruction?: PromptString,
                 fileName?: string
             ): void => {
+                const spanManager = new SpanManager('cody-webview')
+                const span = spanManager.startSpan('smartApplySubmit', {
+                    attributes: {
+                        sampled: true,
+                    },
+                })
+                if (!span) {
+                    throw new Error('Failed to start span for smartApplySubmit')
+                }
+                span.setAttributes({
+                    'smartApply.id': id,
+                })
+                const spanContext = span.spanContext()
+                console.log('My spanContext', spanContext)
+                
                 vscodeAPI.postMessage({
                     command: 'smartApplySubmit',
                     id,
@@ -145,12 +161,14 @@ export const Chat: React.FunctionComponent<React.PropsWithChildren<ChatboxProps>
                 })
             },
             onAccept: (id: string) => {
+                
                 vscodeAPI.postMessage({
                     command: 'smartApplyAccept',
                     id,
                 })
             },
             onReject: (id: string) => {
+                
                 vscodeAPI.postMessage({
                     command: 'smartApplyReject',
                     id,

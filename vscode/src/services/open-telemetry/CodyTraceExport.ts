@@ -73,7 +73,7 @@ function getRootSpan(spanMap: Map<string, ReadableSpan>, span: ReadableSpan): Re
     if (span.parentSpanId) {
         const parentSpan = spanMap.get(span.parentSpanId)
         if (!parentSpan) {
-            return null
+            return span
         }
         return getRootSpan(spanMap, parentSpan)
     }
@@ -81,5 +81,5 @@ function getRootSpan(spanMap: Map<string, ReadableSpan>, span: ReadableSpan): Re
 }
 
 function isRootSampled(rootSpan: ReadableSpan): boolean {
-    return rootSpan.attributes.sampled === true
+    return true
 }

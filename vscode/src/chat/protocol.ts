@@ -206,6 +206,7 @@ export interface WebviewSubmitMessage extends WebviewContextMessage {
     intent?: ChatMessage['intent'] | undefined | null
     intentScores?: { intent: string; score: number }[] | undefined | null
     manuallySelectedIntent?: boolean | undefined | null
+    traceparent?: string | undefined | null
 }
 
 interface WebviewEditMessage extends WebviewContextMessage {
