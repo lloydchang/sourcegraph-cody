@@ -12,7 +12,7 @@ import type {
 import { Transcript, focusLastHumanMessageEditor } from './chat/Transcript'
 import type { VSCodeWrapper } from './utils/VSCodeApi'
 
-import { trace, type Context } from '@opentelemetry/api'
+import type { Context } from '@opentelemetry/api'
 import { truncateTextStart } from '@sourcegraph/cody-shared/src/prompt/truncation'
 import { CHAT_INPUT_TOKEN_BUDGET } from '@sourcegraph/cody-shared/src/token/constants'
 import styles from './Chat.module.css'
@@ -20,9 +20,9 @@ import WelcomeFooter from './chat/components/WelcomeFooter'
 import { WelcomeMessage } from './chat/components/WelcomeMessage'
 import { ScrollDown } from './components/ScrollDown'
 import type { View } from './tabs'
+import { SpanManager } from './utils/spanManager'
 import { useTelemetryRecorder } from './utils/telemetry'
 import { useUserAccountInfo } from './utils/useConfig'
-import { SpanManager } from './utils/spanManager'
 interface ChatboxProps {
     chatEnabled: boolean
     messageInProgress: ChatMessage | null
@@ -150,7 +150,7 @@ export const Chat: React.FunctionComponent<React.PropsWithChildren<ChatboxProps>
                 })
                 const spanContext = span.spanContext()
                 console.log('My spanContext', spanContext)
-                
+
                 vscodeAPI.postMessage({
                     command: 'smartApplySubmit',
                     id,
@@ -161,14 +161,12 @@ export const Chat: React.FunctionComponent<React.PropsWithChildren<ChatboxProps>
                 })
             },
             onAccept: (id: string) => {
-                
                 vscodeAPI.postMessage({
                     command: 'smartApplyAccept',
                     id,
                 })
             },
             onReject: (id: string) => {
-                
                 vscodeAPI.postMessage({
                     command: 'smartApplyReject',
                     id,

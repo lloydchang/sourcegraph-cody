@@ -139,7 +139,7 @@ import { getChatPanelTitle } from './chat-helpers'
 import { type HumanInput, getPriorityContext } from './context'
 import { DefaultPrompter, type PromptInfo } from './prompt'
 import { getPromptsMigrationInfo, startPromptsMigration } from './prompts-migration'
-const { trace, context, propagation, ROOT_CONTEXT } = require('@opentelemetry/api');
+const { trace, context, propagation, ROOT_CONTEXT } = require('@opentelemetry/api')
 
 export interface ChatControllerOptions {
     extensionUri: vscode.Uri
@@ -282,7 +282,7 @@ export class ChatController implements vscode.Disposable, vscode.WebviewViewProv
                 this.setWebviewToChat()
                 break
             case 'submit': {
-                const traceparent = message.traceparent;
+                const traceparent = message.traceparent
 
                 await this.handleUserMessageSubmission({
                     requestID: uuid.v4(),
@@ -638,41 +638,24 @@ export class ChatController implements vscode.Disposable, vscode.WebviewViewProv
         manuallySelectedIntent?: boolean | undefined | null
         traceparent?: string | undefined | null
     }): Promise<void> {
-
-      
         const carrier = {
-          traceparent: traceparent,
-        } as Record<string, any>;
+            traceparent: traceparent,
+        } as Record<string, any>
         const getter = {
             get(carrier: Record<string, any>, key: string) {
-              return carrier[key];
+                return carrier[key]
             },
             keys(carrier: Record<string, any>) {
-              return Object.keys(carrier);
+                return Object.keys(carrier)
             },
         }
 
         const extractedContext = propagation.extract(ROOT_CONTEXT, carrier, getter)
-         // Verify the extracted context
-
-
 
         return context.with(extractedContext, () => {
             tracer.startActiveSpan('chat.submit', async (span): Promise<void> => {
                 span.setAttribute('sampled', true)
-                const spanFromContext = trace.getSpan(extractedContext);
-                console.log(
-                    'Extracted span context:',
-                    spanFromContext ? spanFromContext.spanContext() : 'No span in context'
-                )
-                
-                const currentSpan = trace.getSpan(context.active());
-
-                if (currentSpan) {
-                    const spanContext = currentSpan.spanContext()
-                    console.log('Node.js traceId:', spanContext.traceId)
-                    console.log('Node.js parentSpanId:', spanContext.spanId);
-                }
+                span.setAttribute('continued', true)
                 if (inputText.toString().match(/^\/reset$/)) {
                     span.addEvent('clearAndRestartSession')
                     span.end()

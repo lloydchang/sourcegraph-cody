@@ -293,12 +293,11 @@ const TranscriptInteraction: FC<TranscriptInteractionProps> = memo(props => {
 
         const spanContext = trace.setSpan(context.active(), span)
         setActiveChatContext(spanContext)
-        const currentSpanContext = span.spanContext();
+        const currentSpanContext = span.spanContext()
 
-        const traceparent = `00-${currentSpanContext.traceId}-${currentSpanContext.spanId}-${currentSpanContext.traceFlags.toString(16).padStart(2, '0')}`;
-        console.log("trace parent", traceparent )
-
-        debugger
+        const traceparent = `00-${currentSpanContext.traceId}-${
+            currentSpanContext.spanId
+        }-${currentSpanContext.traceFlags.toString(16).padStart(2, '0')}`
 
         // Serialize the editor value after starting the span
         const editorValue = humanEditorRef.current?.getSerializedValue()
@@ -433,8 +432,6 @@ const TranscriptInteraction: FC<TranscriptInteractionProps> = memo(props => {
             const measure = performance.measure('renderDuration', 'startRender', 'endRender')
             if (renderSpan.current && measure.duration > 0) {
                 // Set attributes and end the render span
-                const spanContext = renderSpan.current.spanContext()
-                console.log('My spanContext', spanContext)
                 renderSpan.current.setAttributes({
                     'render.success': !assistantMessage?.error,
                     'message.length': assistantMessage?.text?.length ?? 0,
@@ -729,7 +726,7 @@ function submitHumanMessage({
     editorValue: SerializedPromptEditorValue
     intent?: ChatMessage['intent']
     intentScores?: { intent: string; score: number }[]
-        manuallySelectedIntent?: boolean
+    manuallySelectedIntent?: boolean
     traceparent: string
 }): void {
     getVSCodeAPI().postMessage({
