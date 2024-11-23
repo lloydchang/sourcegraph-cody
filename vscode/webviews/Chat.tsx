@@ -148,8 +148,10 @@ export const Chat: React.FunctionComponent<React.PropsWithChildren<ChatboxProps>
                 span.setAttributes({
                     'smartApply.id': id,
                 })
-                const spanContext = span.spanContext()
-                console.log('My spanContext', spanContext)
+                const currentSpanContext = span.spanContext()
+                const traceparent = `00-${currentSpanContext.traceId}-${
+                    currentSpanContext.spanId
+                }-${currentSpanContext.traceFlags.toString(16).padStart(2, '0')}`
 
                 vscodeAPI.postMessage({
                     command: 'smartApplySubmit',
@@ -158,7 +160,9 @@ export const Chat: React.FunctionComponent<React.PropsWithChildren<ChatboxProps>
                     // remove the additional /n added by the text area at the end of the text
                     code: text.replace(/\n$/, ''),
                     fileName,
+                    traceparent,
                 })
+                span.end()
             },
             onAccept: (id: string) => {
                 vscodeAPI.postMessage({
